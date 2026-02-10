@@ -1,7 +1,8 @@
 import type { Node, Edge } from '@xyflow/react'
 
-// Legal Case Assessment Workflow - demonstrates full lifecycle
-// This workflow shows: triggers → AI analysis → human gates → generation → approval → output
+// Customer Support Chatbot Workflow
+// Demonstrates: triggers, AI classification, knowledge retrieval, logic routing,
+// content guardrails, chat responses, and human escalation.
 
 export interface WorkflowNodeData extends Record<string, unknown> {
   label: string
@@ -14,482 +15,216 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   status?: 'idle' | 'running' | 'waiting' | 'completed' | 'error'
 }
 
-// Sample nodes representing the Legal Case Assessment workflow
+// ============================================================
+// Customer Support Chatbot – Nodes
+// ============================================================
 export const sampleNodes: Node<WorkflowNodeData>[] = [
-  // Trigger: Manual Start (Assess Case button clicked)
+  // Trigger: user sends a chat message
   {
-    id: 'trigger-1',
+    id: 'chat-trigger',
     type: 'workflowNode',
-    position: { x: 50, y: 200 },
+    position: { x: 50, y: 250 },
     data: {
-      label: 'Assess Case',
-      componentId: 'trigger.ManualStart',
-      description: 'Triggered when consultant clicks "Assess Case"',
+      label: 'Chat Message',
+      componentId: 'trigger.ChatMessage',
+      description: 'Triggered when a customer sends a chat message',
       kind: 'trigger',
-      color: 'green',
-      icon: 'Play',
+      color: 'emerald',
+      icon: 'MessageSquare',
       status: 'completed',
     },
   },
 
-  // Step 1: Extract Facts & Timeline
+  // AI: Classify the intent
   {
-    id: 'extract-facts',
+    id: 'classify-intent',
     type: 'workflowNode',
-    position: { x: 250, y: 200 },
+    position: { x: 280, y: 250 },
     data: {
-      label: 'Extract Facts',
-      componentId: 'legal.ExtractFactsTimeline',
-      description: 'AI extracts structured facts and timeline with citations',
-      kind: 'node',
-      color: 'blue',
-      icon: 'FileSearch',
+      label: 'Classify Intent',
+      componentId: 'ai.Classifier',
+      description: 'AI classifies the user message into intent categories',
+      kind: 'ai',
+      color: 'purple',
+      icon: 'Tags',
+      config: {
+        categories: ['simple_question', 'complex_issue', 'billing', 'escalation'],
+      },
       status: 'completed',
     },
   },
 
-  // Step 2: Spot Legal Issues
+  // Logic: Is this a simple question?
   {
-    id: 'spot-issues',
+    id: 'is-simple',
     type: 'workflowNode',
-    position: { x: 450, y: 200 },
+    position: { x: 510, y: 250 },
     data: {
-      label: 'Spot Issues',
-      componentId: 'legal.SpotIssues',
-      description: 'AI identifies legal issues with confidence scores',
-      kind: 'node',
-      color: 'blue',
-      icon: 'AlertTriangle',
-      status: 'completed',
-    },
-  },
-
-  // Step 3: Missing Info Checklist
-  {
-    id: 'missing-info',
-    type: 'workflowNode',
-    position: { x: 650, y: 200 },
-    data: {
-      label: 'Missing Info',
-      componentId: 'legal.MissingInfoChecklist',
-      description: 'Generates checklist of missing documents/facts',
-      kind: 'node',
-      color: 'blue',
-      icon: 'ClipboardList',
+      label: 'Simple?',
+      componentId: 'logic.Condition',
+      description: 'Check if the query can be answered from the knowledge base',
+      kind: 'logic',
+      color: 'amber',
+      icon: 'GitBranch',
+      config: {
+        condition: 'category === "simple_question"',
+      },
       status: 'running',
     },
   },
 
-  // Step 4: Strength Assessment
+  // Knowledge: search the knowledge base (simple path)
   {
-    id: 'strength-assess',
+    id: 'knowledge-search',
     type: 'workflowNode',
-    position: { x: 850, y: 200 },
+    position: { x: 740, y: 150 },
     data: {
-      label: 'Assessment',
-      componentId: 'legal.StrengthAssessment',
-      description: 'Assesses case strengths, weaknesses, assumptions',
-      kind: 'node',
+      label: 'Knowledge Base',
+      componentId: 'knowledge.KnowledgeBase',
+      description: 'Retrieve relevant articles using semantic search (RAG)',
+      kind: 'knowledge',
       color: 'blue',
-      icon: 'BarChart3',
+      icon: 'BookOpen',
       status: 'idle',
     },
   },
 
-  // Human Gate 1: Review Assessment Artifacts
+  // AI: Generate answer from context
   {
-    id: 'approval-gate-1',
+    id: 'llm-answer',
     type: 'workflowNode',
-    position: { x: 1050, y: 200 },
+    position: { x: 970, y: 150 },
     data: {
-      label: 'Review Artifacts',
-      componentId: 'gate.HumanApproval',
-      description: 'Consultant reviews and approves AI-generated artifacts',
-      kind: 'gate',
-      color: 'orange',
-      icon: 'UserCheck',
-      config: {
-        reason: 'Review extracted facts, issues, and assessment before proceeding',
-      },
-      status: 'idle',
-    },
-  },
-
-  // Conditional: Check if assessment is approved
-  {
-    id: 'condition-approved',
-    type: 'workflowNode',
-    position: { x: 1250, y: 200 },
-    data: {
-      label: 'Approved?',
-      componentId: 'flow.Condition',
-      description: 'Check if artifacts were approved or rejected',
-      kind: 'condition',
-      color: 'yellow',
-      icon: 'GitBranch',
-      config: {
-        condition: 'decision === "approved"',
-      },
-      status: 'idle',
-    },
-  },
-
-  // Branch: Generate Memo (if approved)
-  {
-    id: 'generate-memo',
-    type: 'workflowNode',
-    position: { x: 1450, y: 100 },
-    data: {
-      label: 'Generate Memo',
-      componentId: 'legal.AssembleMemo',
-      description: 'AI generates assessment memo from approved artifacts',
-      kind: 'node',
+      label: 'LLM',
+      componentId: 'ai.LLM',
+      description: 'Generate a helpful answer using retrieved context',
+      kind: 'ai',
       color: 'purple',
-      icon: 'FileText',
-      status: 'idle',
-    },
-  },
-
-  // Branch: Check if missing info exists (parallel path)
-  {
-    id: 'has-missing-info',
-    type: 'workflowNode',
-    position: { x: 1450, y: 300 },
-    data: {
-      label: 'Missing Info?',
-      componentId: 'flow.Condition',
-      description: 'Check if there are missing documents to request',
-      kind: 'condition',
-      color: 'yellow',
-      icon: 'GitBranch',
+      icon: 'Brain',
       config: {
-        condition: 'checklist.items.length > 0',
+        model: 'claude-sonnet-4-5-20250929',
+        temperature: 0.3,
       },
       status: 'idle',
     },
   },
 
-  // Generate Client Email (if missing info)
+  // Trust: Content guardrail before responding
   {
-    id: 'generate-email',
+    id: 'guardrail',
     type: 'workflowNode',
-    position: { x: 1650, y: 350 },
+    position: { x: 1200, y: 150 },
     data: {
-      label: 'Draft Email',
-      componentId: 'legal.ClientEmailDraft',
-      description: 'AI drafts email requesting missing information',
-      kind: 'node',
-      color: 'purple',
-      icon: 'Mail',
+      label: 'Guardrail',
+      componentId: 'trust.ContentGuardrail',
+      description: 'Ensure AI response is safe, on-topic, and policy-compliant',
+      kind: 'trust',
+      color: 'rose',
+      icon: 'Shield',
       status: 'idle',
     },
   },
 
-  // Human Gate 2: Edit Email
+  // Output: Send chat response
   {
-    id: 'edit-email-gate',
+    id: 'chat-response',
     type: 'workflowNode',
-    position: { x: 1850, y: 350 },
+    position: { x: 1430, y: 150 },
     data: {
-      label: 'Edit Email',
-      componentId: 'gate.EditGate',
-      description: 'Consultant reviews and edits email before sending',
-      kind: 'gate',
-      color: 'orange',
-      icon: 'PenLine',
+      label: 'Chat Response',
+      componentId: 'output.ChatResponse',
+      description: 'Send the answer back to the customer',
+      kind: 'output',
+      color: 'slate',
+      icon: 'MessageCircle',
       status: 'idle',
     },
   },
 
-  // Send Email
-  {
-    id: 'send-email',
-    type: 'workflowNode',
-    position: { x: 2050, y: 350 },
-    data: {
-      label: 'Send Email',
-      componentId: 'connector.EmailSend',
-      description: 'Sends approved email to client',
-      kind: 'connector',
-      color: 'cyan',
-      icon: 'Send',
-      status: 'idle',
-    },
-  },
-
-  // Human Gate 3: Review Memo
-  {
-    id: 'review-memo-gate',
-    type: 'workflowNode',
-    position: { x: 1650, y: 100 },
-    data: {
-      label: 'Review Memo',
-      componentId: 'gate.HumanApproval',
-      description: 'Senior reviewer approves final memo',
-      kind: 'gate',
-      color: 'orange',
-      icon: 'UserCheck',
-      config: {
-        reason: 'Final review of assessment memo before completion',
-      },
-      status: 'idle',
-    },
-  },
-
-  // Rejected path: Request more info
-  {
-    id: 'request-info-task',
-    type: 'workflowNode',
-    position: { x: 1450, y: 450 },
-    data: {
-      label: 'Request Info',
-      componentId: 'gate.TaskAssignment',
-      description: 'Create task for consultant to gather more information',
-      kind: 'gate',
-      color: 'orange',
-      icon: 'ListTodo',
-      config: {
-        title: 'Gather additional information for case assessment',
-      },
-      status: 'idle',
-    },
-  },
-
-  // Error Handler: AI Failure
-  {
-    id: 'ai-error-handler',
-    type: 'workflowNode',
-    position: { x: 450, y: 400 },
-    data: {
-      label: 'AI Error Log',
-      componentId: 'util.Logger',
-      description: 'Logs AI failure details to audit ledger',
-      kind: 'node',
-      color: 'gray',
-      icon: 'ScrollText',
-      config: {
-        level: 'error',
-        message: 'AI processing failed',
-      },
-      status: 'idle',
-    },
-  },
-
-  // End: AI Error
-  {
-    id: 'end-ai-error',
-    type: 'workflowNode',
-    position: { x: 650, y: 400 },
-    data: {
-      label: 'AI Failed',
-      componentId: 'end.Error',
-      description: 'Workflow ended due to AI processing failure',
-      kind: 'end',
-      color: 'red',
-      icon: 'XCircle',
-      status: 'idle',
-    },
-  },
-
-  // End: Success
+  // Output: End Success (simple path)
   {
     id: 'end-success',
     type: 'workflowNode',
-    position: { x: 1850, y: 100 },
+    position: { x: 1660, y: 150 },
     data: {
       label: 'Complete',
-      componentId: 'end.Success',
-      description: 'Case assessment workflow completed',
-      kind: 'end',
+      componentId: 'output.EndSuccess',
+      description: 'Conversation handled successfully',
+      kind: 'output',
       color: 'emerald',
       icon: 'CheckCircle',
       status: 'idle',
     },
   },
 
-  // End: Awaiting client response
+  // Output: Escalate to human (complex path)
   {
-    id: 'end-waiting',
+    id: 'escalate',
     type: 'workflowNode',
-    position: { x: 2250, y: 350 },
+    position: { x: 740, y: 380 },
     data: {
-      label: 'Awaiting Response',
-      componentId: 'end.Waiting',
-      description: 'Waiting for client to provide missing information',
-      kind: 'end',
-      color: 'amber',
-      icon: 'Pause',
+      label: 'Escalation',
+      componentId: 'output.Escalation',
+      description: 'Hand off to a human agent for complex issues',
+      kind: 'output',
+      color: 'slate',
+      icon: 'PhoneForwarded',
+      config: {
+        priority: 'normal',
+      },
+      status: 'idle',
+    },
+  },
+
+  // Output: End Success (escalation path)
+  {
+    id: 'end-escalated',
+    type: 'workflowNode',
+    position: { x: 970, y: 380 },
+    data: {
+      label: 'Escalated',
+      componentId: 'output.EndSuccess',
+      description: 'Conversation escalated to human agent',
+      kind: 'output',
+      color: 'emerald',
+      icon: 'CheckCircle',
       status: 'idle',
     },
   },
 ]
 
-// Edges connecting the workflow nodes
+// ============================================================
+// Customer Support Chatbot – Edges
+// ============================================================
 export const sampleEdges: Edge[] = [
-  // Main flow: Trigger → Extract Facts → Spot Issues → Missing Info → Assessment
-  // AI nodes use 'success' handle for main flow and 'failure' handle for error handling
+  // Trigger → Classifier
   {
-    id: 'e-trigger-extract',
-    source: 'trigger-1',
-    target: 'extract-facts',
+    id: 'e-trigger-classify',
+    source: 'chat-trigger',
+    target: 'classify-intent',
     sourceHandle: 'output',
-    targetHandle: 'input',
     animated: true,
-    style: { stroke: '#000000', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
-  },
-  {
-    id: 'e-extract-spot',
-    source: 'extract-facts',
-    target: 'spot-issues',
-    sourceHandle: 'success',  // AI node success output
-    targetHandle: 'input',
-    animated: true,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  // Failure path from Extract Facts to error handler
-  {
-    id: 'e-extract-failure',
-    source: 'extract-facts',
-    target: 'ai-error-handler',
-    sourceHandle: 'failure',  // AI node failure output
-    targetHandle: 'input',
-    animated: false,
-    label: 'Failure',
-    labelStyle: { fill: '#ef4444', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#ef4444',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#ef4444', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#ef4444' },
-  },
-  {
-    id: 'e-spot-missing',
-    source: 'spot-issues',
-    target: 'missing-info',
-    sourceHandle: 'success',  // AI node success output
-    targetHandle: 'input',
-    animated: true,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  // Failure path from Spot Issues to error handler
-  {
-    id: 'e-spot-failure',
-    source: 'spot-issues',
-    target: 'ai-error-handler',
-    sourceHandle: 'failure',  // AI node failure output
-    targetHandle: 'input',
-    animated: false,
-    label: 'Failure',
-    labelStyle: { fill: '#ef4444', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#ef4444',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#ef4444', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#ef4444' },
-  },
-  {
-    id: 'e-missing-strength',
-    source: 'missing-info',
-    target: 'strength-assess',
-    sourceHandle: 'success',  // AI node success output
-    targetHandle: 'input',
-    animated: false,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  {
-    id: 'e-strength-gate1',
-    source: 'strength-assess',
-    target: 'approval-gate-1',
-    sourceHandle: 'success',  // AI node success output
-    targetHandle: 'input',
-    animated: false,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  // Error handler to end error
-  {
-    id: 'e-error-end',
-    source: 'ai-error-handler',
-    target: 'end-ai-error',
-    sourceHandle: 'output',
-    targetHandle: 'input',
-    animated: false,
-    style: { stroke: '#ef4444', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#ef4444' },
-  },
-  {
-    id: 'e-gate1-condition',
-    source: 'approval-gate-1',
-    target: 'condition-approved',
-    sourceHandle: 'output',
-    targetHandle: 'input',
-    animated: false,
     style: { stroke: '#000000', strokeWidth: 2 },
     markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
   },
 
-  // Approved branch: Generate Memo
+  // Classifier → Condition (output handle)
   {
-    id: 'e-condition-memo',
-    source: 'condition-approved',
-    target: 'generate-memo',
+    id: 'e-classify-condition',
+    source: 'classify-intent',
+    target: 'is-simple',
+    sourceHandle: 'output',
+    animated: true,
+    style: { stroke: '#000000', strokeWidth: 2 },
+    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
+  },
+
+  // Condition → Yes → Knowledge Base
+  {
+    id: 'e-simple-yes',
+    source: 'is-simple',
+    target: 'knowledge-search',
     sourceHandle: 'true',
-    targetHandle: 'input',
-    animated: false,
     label: 'Yes',
     labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
     labelBgStyle: {
@@ -504,26 +239,12 @@ export const sampleEdges: Edge[] = [
     markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
   },
 
-  // Approved branch: Check missing info
+  // Condition → No → Escalation
   {
-    id: 'e-condition-hasmissing',
-    source: 'condition-approved',
-    target: 'has-missing-info',
-    sourceHandle: 'true',
-    targetHandle: 'input',
-    animated: false,
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-
-  // Rejected branch: Request more info
-  {
-    id: 'e-condition-rejected',
-    source: 'condition-approved',
-    target: 'request-info-task',
+    id: 'e-simple-no',
+    source: 'is-simple',
+    target: 'escalate',
     sourceHandle: 'false',
-    targetHandle: 'input',
-    animated: false,
     label: 'No',
     labelStyle: { fill: '#ef4444', fontSize: 11, fontWeight: 500 },
     labelBgStyle: {
@@ -538,217 +259,52 @@ export const sampleEdges: Edge[] = [
     markerEnd: { type: 'arrowclosed' as const, color: '#ef4444' },
   },
 
-  // Memo review flow - Generate Memo is an AI node with success/failure outputs
+  // Knowledge Base → LLM
   {
-    id: 'e-memo-review',
-    source: 'generate-memo',
-    target: 'review-memo-gate',
-    sourceHandle: 'success',  // AI node success output
-    targetHandle: 'input',
-    animated: false,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
+    id: 'e-kb-llm',
+    source: 'knowledge-search',
+    target: 'llm-answer',
+    sourceHandle: 'output',
+    style: { stroke: '#000000', strokeWidth: 2 },
+    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
   },
+
+  // LLM → Guardrail
   {
-    id: 'e-review-success',
-    source: 'review-memo-gate',
+    id: 'e-llm-guardrail',
+    source: 'llm-answer',
+    target: 'guardrail',
+    sourceHandle: 'output',
+    style: { stroke: '#000000', strokeWidth: 2 },
+    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
+  },
+
+  // Guardrail → Chat Response
+  {
+    id: 'e-guardrail-response',
+    source: 'guardrail',
+    target: 'chat-response',
+    sourceHandle: 'output',
+    style: { stroke: '#000000', strokeWidth: 2 },
+    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
+  },
+
+  // Chat Response → End Success
+  {
+    id: 'e-response-end',
+    source: 'chat-response',
     target: 'end-success',
-    sourceHandle: 'approved',
-    targetHandle: 'input',
-    animated: false,
-    label: 'Approved',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-
-  // Email generation flow (if missing info)
-  {
-    id: 'e-hasmissing-email',
-    source: 'has-missing-info',
-    target: 'generate-email',
-    sourceHandle: 'true',
-    targetHandle: 'input',
-    animated: false,
-    label: 'Yes',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  // Generate Email is an AI node with success/failure outputs
-  {
-    id: 'e-email-edit',
-    source: 'generate-email',
-    target: 'edit-email-gate',
-    sourceHandle: 'success',  // AI node success output
-    targetHandle: 'input',
-    animated: false,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  {
-    id: 'e-edit-send',
-    source: 'edit-email-gate',
-    target: 'send-email',
-    sourceHandle: 'finalized',
-    targetHandle: 'input',
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
-  },
-  {
-    id: 'e-send-waiting',
-    source: 'send-email',
-    target: 'end-waiting',
     sourceHandle: 'output',
-    targetHandle: 'input',
-    animated: false,
     style: { stroke: '#000000', strokeWidth: 2 },
     markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
   },
 
-  // Loop back from request info (simplified - in reality would trigger new assessment)
+  // Escalation → End Escalated
   {
-    id: 'e-request-waiting',
-    source: 'request-info-task',
-    target: 'end-waiting',
-    sourceHandle: 'completed',
-    targetHandle: 'input',
-    animated: false,
-    style: { stroke: '#000000', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
-  },
-]
-
-// Alternative: Simple Assessment Workflow (for quick demo)
-export const simpleWorkflowNodes: Node<WorkflowNodeData>[] = [
-  {
-    id: 'start',
-    type: 'workflowNode',
-    position: { x: 50, y: 150 },
-    data: {
-      label: 'Case Created',
-      componentId: 'trigger.CaseCreated',
-      kind: 'trigger',
-      color: 'green',
-      icon: 'Plus',
-      status: 'completed',
-    },
-  },
-  {
-    id: 'analyze',
-    type: 'workflowNode',
-    position: { x: 250, y: 150 },
-    data: {
-      label: 'AI Analysis',
-      componentId: 'legal.CaseOrchestrator',
-      description: 'Full case assessment pipeline',
-      kind: 'node',
-      color: 'blue',
-      icon: 'Workflow',
-      status: 'running',
-    },
-  },
-  {
-    id: 'approve',
-    type: 'workflowNode',
-    position: { x: 450, y: 150 },
-    data: {
-      label: 'Approve Results',
-      componentId: 'gate.HumanApproval',
-      kind: 'gate',
-      color: 'orange',
-      icon: 'UserCheck',
-      status: 'idle',
-    },
-  },
-  {
-    id: 'complete',
-    type: 'workflowNode',
-    position: { x: 650, y: 150 },
-    data: {
-      label: 'Complete',
-      componentId: 'end.Success',
-      kind: 'end',
-      color: 'emerald',
-      icon: 'CheckCircle',
-      status: 'idle',
-    },
-  },
-]
-
-export const simpleWorkflowEdges: Edge[] = [
-  {
-    id: 'e1',
-    source: 'start',
-    target: 'analyze',
+    id: 'e-escalate-end',
+    source: 'escalate',
+    target: 'end-escalated',
     sourceHandle: 'output',
-    animated: true,
-    style: { stroke: '#000000', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
-  },
-  // AI Analysis node uses success handle
-  {
-    id: 'e2',
-    source: 'analyze',
-    target: 'approve',
-    sourceHandle: 'success',
-    animated: true,
-    label: 'Success',
-    labelStyle: { fill: '#22c55e', fontSize: 11, fontWeight: 500 },
-    labelBgStyle: {
-      fill: 'hsl(var(--background))',
-      fillOpacity: 1,
-      stroke: '#22c55e',
-      strokeWidth: 1,
-      strokeDasharray: '4 2',
-    },
-    labelBgPadding: [6, 10] as [number, number],
-    style: { stroke: '#22c55e', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' as const, color: '#22c55e' },
-  },
-  {
-    id: 'e3',
-    source: 'approve',
-    target: 'complete',
-    sourceHandle: 'approved',
-    animated: false,
     style: { stroke: '#000000', strokeWidth: 2 },
     markerEnd: { type: 'arrowclosed' as const, color: '#000000' },
   },

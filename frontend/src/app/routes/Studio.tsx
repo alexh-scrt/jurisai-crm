@@ -35,13 +35,11 @@ import {
   MoreVertical,
   Info,
   Zap,
-  Scale,
-  FileText,
+  Database,
   GitBranch,
-  UserCheck,
-  Plug,
-  Wrench,
-  Flag,
+  ShieldCheck,
+  Globe,
+  MessageCircle,
   Circle,
   ArrowRight,
   Minus,
@@ -86,16 +84,13 @@ import {
   getComponentById,
   type ComponentDefinition,
 } from '@/mock-data/components'
+import { getDefaultValues } from '@/lib/config-schema'
+import { SchemaConfigForm } from '@/components/studio/SchemaConfigForm'
 import { sampleNodes, sampleEdges, type WorkflowNodeData } from '@/mock-data/sample-workflow'
-import {
-  californiaWorkflowNodes,
-  californiaWorkflowEdges,
-} from '@/mock-data/california-criminal-workflow'
 
 // Map workflow IDs to their node/edge data
 const workflowDataMap: Record<string, { nodes: typeof sampleNodes; edges: typeof sampleEdges }> = {
   'wf-1': { nodes: sampleNodes, edges: sampleEdges },
-  'ca-criminal-defense-intake': { nodes: californiaWorkflowNodes, edges: californiaWorkflowEdges },
 }
 
 // Get workflow data by ID, fallback to sample workflow
@@ -109,13 +104,13 @@ function getWorkflowData(id: string | undefined) {
 // Icon mapping for dynamic icon rendering
 const categoryIcons: Record<string, React.ElementType> = {
   triggers: Zap,
-  'legal-analysis': Scale,
-  'legal-generation': FileText,
-  'workflow-control': GitBranch,
-  'human-gates': UserCheck,
-  connectors: Plug,
-  utilities: Wrench,
-  endpoints: Flag,
+  'ai-models': Sparkles,
+  knowledge: Database,
+  logic: GitBranch,
+  trust: ShieldCheck,
+  data: Settings,
+  connections: Globe,
+  outputs: MessageCircle,
 }
 
 // Get Lucide icon by name
@@ -195,11 +190,12 @@ function WorkflowNode({ data, selected }: { data: WorkflowNodeData; selected: bo
   const Icon = getIcon(data.icon)
   const status = statusStyles[data.status || 'idle']
 
-  // Determine handle positions based on node kind
+  // Determine handle positions based on node kind and component ports
   const hasInputHandle = data.kind !== 'trigger'
-  const hasOutputHandle = data.kind !== 'end'
-  const isConditional = data.kind === 'condition' || data.kind === 'gate'
-  const isAINode = component?.hasAI === true && !isConditional
+  const isEndNode = component ? component.outputs.length === 0 : false
+  const hasOutputHandle = !isEndNode
+  const isConditional = component?.outputs.some(o => o.id === 'true') && component?.outputs.some(o => o.id === 'false')
+  const isAINode = false // New universal components use single output handles
 
   return (
     <div
@@ -466,6 +462,11 @@ export function Studio() {
         y: event.clientY - bounds.top - 30,
       }
 
+      // Initialize config from schema defaults if available
+      const config = component.configSchema
+        ? getDefaultValues(component.configSchema)
+        : undefined
+
       const newNode: Node<WorkflowNodeData> = {
         id: `${component.id}-${Date.now()}`,
         type: 'workflowNode',
@@ -478,6 +479,7 @@ export function Studio() {
           color: component.color,
           icon: component.icon,
           status: 'idle',
+          ...(config && Object.keys(config).length > 0 ? { config } : {}),
         },
       }
 
@@ -657,7 +659,7 @@ export function Studio() {
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <div className="w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.8)]" />
-              <span className="text-sm font-semibold">JurisAI Studio</span>
+              <span className="text-sm font-semibold">SecretAI Rails</span>
             </Link>
             <ChevronRight className="h-3 w-3 text-muted-foreground" />
             <span className="text-sm font-medium">{workflow.name}</span>
@@ -774,7 +776,7 @@ export function Studio() {
                         All
                       </Badge>
                       {componentCategories.map((cat) => {
-                        const CatIcon = categoryIcons[cat.id] || Wrench
+                        const CatIcon = categoryIcons[cat.id] || Circle
                         return (
                           <Tooltip key={cat.id}>
                             <TooltipTrigger asChild>
@@ -810,7 +812,7 @@ export function Studio() {
                           <div key={category.id} className="mb-4">
                             <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2 flex items-center gap-1">
                               {(() => {
-                                const CatIcon = categoryIcons[category.id] || Wrench
+                                const CatIcon = categoryIcons[category.id] || Circle
                                 return <CatIcon className="h-3 w-3" />
                               })()}
                               {category.name}
@@ -1031,21 +1033,53 @@ export function Studio() {
                                 }}
                               />
                             </div>
-                            {selectedNode.data.config &&
-                              Object.entries(selectedNode.data.config).map(
-                                ([key, value]) => (
-                                  <div key={key}>
-                                    <label className="text-[10px] text-muted-foreground capitalize">
-                                      {key.replace(/_/g, ' ')}
-                                    </label>
-                                    <Input
-                                      className="h-8 text-xs mt-1 border-primary/30"
-                                      value={String(value)}
-                                      readOnly
-                                    />
-                                  </div>
+                            {(() => {
+                              const comp = getComponentById(selectedNode.data.componentId)
+                              if (comp?.configSchema) {
+                                return (
+                                  <SchemaConfigForm
+                                    schema={comp.configSchema}
+                                    values={(selectedNode.data.config as Record<string, unknown>) ?? {}}
+                                    onChange={(key, value) => {
+                                      setNodes((nds) =>
+                                        nds.map((n) =>
+                                          n.id === selectedNode.id
+                                            ? {
+                                                ...n,
+                                                data: {
+                                                  ...n.data,
+                                                  config: {
+                                                    ...(n.data.config ?? {}),
+                                                    [key]: value,
+                                                  },
+                                                },
+                                              }
+                                            : n
+                                        )
+                                      )
+                                    }}
+                                  />
                                 )
-                              )}
+                              }
+                              // Fallback: read-only key-value for components without schema
+                              if (selectedNode.data.config) {
+                                return Object.entries(selectedNode.data.config).map(
+                                  ([k, v]) => (
+                                    <div key={k}>
+                                      <label className="text-[10px] text-muted-foreground capitalize">
+                                        {k.replace(/_/g, ' ')}
+                                      </label>
+                                      <Input
+                                        className="h-8 text-xs mt-1 border-primary/30"
+                                        value={String(v)}
+                                        readOnly
+                                      />
+                                    </div>
+                                  )
+                                )
+                              }
+                              return null
+                            })()}
                           </TabsContent>
 
                           <TabsContent value="ports" className="space-y-4 pt-3">

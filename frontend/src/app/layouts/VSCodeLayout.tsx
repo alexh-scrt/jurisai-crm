@@ -197,7 +197,7 @@ export function VSCodeLayout() {
             <div className="mb-2">
               <div className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-muted-foreground uppercase">
                 <ChevronDown className="h-3 w-3" />
-                JurisAI Studio
+                SecretAI Rails
               </div>
               {explorerData.map((item) => (
                 <FileTreeItem key={item.id} item={item} />
